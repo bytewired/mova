@@ -1,4 +1,4 @@
-pub enum Token {
+pub enum TokenKind {
     LeftParen,
     RightParen,
     LeftBracket,
@@ -68,8 +68,9 @@ pub enum Token {
     Eof,
 }
 
-enum TokenSuffix {
-    d,
+pub enum TokenSuffix {
+    None,
+    D,
     L,
     LL,
     U,
@@ -77,7 +78,8 @@ enum TokenSuffix {
     ULL,
 }
 
-enum TokenMod {
+pub enum TokenMod {
+    None,
     Hex,
     Bin,
     Oct,
@@ -85,26 +87,45 @@ enum TokenMod {
     Multiline,
 }
 
-enum TypeKind {
+pub enum TypeKind {
     Base,
     Pointer,
     Array,
 }
 
+pub enum Value {
+    None,
+    Int(i32),
+    Float(f32),
+    Str(String),
+}
+
 pub struct Token {
-    kind: TokenKind,
-    name: String,
-    modd: TokenMod,
-    suffix: TokenSuffix,
-    line: i32,
-    // todo: add Value; https://github.com/seamless-os/Mova/blob/master/src/token.h#L66
+    pub kind: TokenKind,
+    pub modd: TokenMod,
+    pub suffix: TokenSuffix,
+    pub value: Value,
+    pub line: u32,
 }
 
 impl Token {
-    fn new(kind: TokenKind, name: String) -> Self {
+    pub fn new(kind: TokenKind, value: Value) -> Self {
         Token {
             kind: kind,
-            name: name,
+            modd: TokenMod::None,
+            suffix: TokenSuffix::None,
+            value: value,
+            line: 0,
+        }
+    }
+
+    pub fn eof() -> Self {
+        Token {
+            kind: TokenKind::Eof,
+            value: Value::None,
+            modd: TokenMod::None,
+            suffix: TokenSuffix::None,
+            line: 0,
         }
     }
 }
