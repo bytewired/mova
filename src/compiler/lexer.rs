@@ -94,6 +94,28 @@ impl<'a> Lexer<'a> {
             Value::Int(mantissa.parse::<i32>().unwrap()),
         ))
     }
+
+    fn eat_string(&mut self) -> Option<Token> {
+        if *self.iter.current().unwrap() != '\"' {
+            return Option::None;
+        }
+
+        let mut string = String::new();
+
+        while let Some(c) = self.iter.next() {
+            if *c == '\"' {
+                break;
+            } else {
+                string.push(*c);
+            }
+        }
+
+        if self.iter.is_at_end() {
+            panic!("Unterminated string");
+        }
+
+        Option::Some(Token::new(TokenKind::String, Value::Str(string)))
+    }
 }
 
 struct CharsIterator<'a> {
@@ -148,10 +170,10 @@ mod tests {
         let string = "123456";
         let mut lexer = Lexer::new(string);
 
-        let token = lexer.eat_number();
+        let token = lexer.eat_number().unwrap();
 
-        assert!(token.is_some());
-        assert!(token.unwrap().value == Value::Int(123456));
+        assert!(token.kind == TokenKind::Int);
+        assert!(token.value == Value::Int(123456));
     }
 
     #[test]
@@ -159,9 +181,29 @@ mod tests {
         let string = "3.14";
         let mut lexer = Lexer::new(string);
 
-        let token = lexer.eat_number();
+        let token = lexer.eat_number().unwrap();
 
-        assert!(token.is_some());
-        assert!(token.unwrap().value == Value::Float(3.14));
+        assert!(token.kind == TokenKind::Float);
+        assert!(token.value == Value::Float(3.14));
+    }
+
+    #[test]
+    fn eat_string_is_valid_string() {
+        let string = "\"abcdef\"";
+        let mut lexer = Lexer::new(string);
+
+        let token = lexer.eat_string().unwrap();
+
+        assert!(token.kind == TokenKind::String);
+        assert!(token.value == Value::Str(String::from("abcdef")));
+    }
+
+    #[test]
+    #[should_panic(expected = "Unterminated string")]
+    fn eat_string_is_unterminated_string() {
+        let string = "\"abcdef";
+        let mut lexer = Lexer::new(string);
+
+        lexer.eat_string();
     }
 }
