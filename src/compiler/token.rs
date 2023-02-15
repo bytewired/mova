@@ -93,6 +93,7 @@ pub enum TypeKind {
     Array,
 }
 
+#[derive(PartialEq)]
 pub enum Value {
     None,
     Int(i32),

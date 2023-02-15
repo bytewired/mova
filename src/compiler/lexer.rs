@@ -8,7 +8,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(source: &'a String) -> Self {
+    pub fn new(source: &'a str) -> Self {
         if source.is_empty() {
             panic!("File is empty")
         }
@@ -69,6 +69,7 @@ impl<'a> Lexer<'a> {
 
             if is_next_dot && is_after_next_digit {
                 has_exponent = true;
+                self.iter.next();
                 break;
             }
         }
@@ -88,7 +89,10 @@ impl<'a> Lexer<'a> {
             return Option::Some(Token::new(TokenKind::Float, Value::Float(float)));
         }
 
-        Option::Some(Token::new(TokenKind::Int, Value::Int(mantissa.parse::<i32>().unwrap())))
+        Option::Some(Token::new(
+            TokenKind::Int,
+            Value::Int(mantissa.parse::<i32>().unwrap()),
+        ))
     }
 }
 
@@ -133,4 +137,31 @@ impl<'a> CharsIterator<'a> {
 // utils
 fn is_digit(c: &char) -> bool {
     c.is_digit(10)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn eat_number_int() {
+        let string = "123456";
+        let mut lexer = Lexer::new(string);
+
+        let token = lexer.eat_number();
+
+        assert!(token.is_some());
+        assert!(token.unwrap().value == Value::Int(123456));
+    }
+
+    #[test]
+    fn eat_number_float() {
+        let string = "3.14";
+        let mut lexer = Lexer::new(string);
+
+        let token = lexer.eat_number();
+
+        assert!(token.is_some());
+        assert!(token.unwrap().value == Value::Float(3.14));
+    }
 }
