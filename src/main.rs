@@ -3,13 +3,15 @@ use std::fs;
 use std::io::ErrorKind;
 
 use crate::compiler::Compiler;
+use crate::utils::exit_with_err_msg;
 mod compiler;
+mod utils;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
-        panic!("No input file.")
+        exit_with_err_msg("No input file.")
     }
 
     let path = &args[1];
@@ -21,8 +23,8 @@ fn main() {
         }
         Err(e) => {
             match e.kind() {
-                ErrorKind::NotFound => println!("File not found."),
-                _ => println!("Unknown error: {e}"),
+                ErrorKind::NotFound => exit_with_err_msg("File not found."),
+                _ => exit_with_err_msg(&format!("Unknown error: {e}")),
             };
         }
     }
