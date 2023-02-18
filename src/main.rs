@@ -18,7 +18,7 @@ fn main() {
     println!("Opening the file {path}");
 
     match fs::read_to_string(path) {
-        Ok(file)=> {
+        Ok(file) => {
             Compiler::new(file).compile();
         }
         Err(e) => {
