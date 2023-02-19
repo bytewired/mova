@@ -1,4 +1,4 @@
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum TokenKind {
     LeftParen,
     RightParen,
@@ -69,6 +69,7 @@ pub enum TokenKind {
     Eof,
 }
 
+#[derive(Debug)]
 pub enum TokenSuffix {
     None,
     D,
@@ -79,6 +80,7 @@ pub enum TokenSuffix {
     ULL,
 }
 
+#[derive(Debug)]
 pub enum TokenMod {
     None,
     Hex,
@@ -94,7 +96,7 @@ pub enum TypeKind {
     Array,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum Value {
     None,
     Int(i32),
@@ -102,6 +104,13 @@ pub enum Value {
     Str(String),
 }
 
+impl Value {
+    pub fn from(slice: &'static str) -> Value {
+        Value::Str(slice.to_string())
+    }
+}
+
+#[derive(Debug)]
 pub struct Token {
     pub kind: TokenKind,
     pub modd: TokenMod,
@@ -111,13 +120,13 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, value: Value) -> Self {
+    pub fn new(kind: TokenKind, line: u32, value: Value) -> Self {
         Token {
             kind: kind,
             modd: TokenMod::None,
             suffix: TokenSuffix::None,
             value: value,
-            line: 0,
+            line: line,
         }
     }
 
