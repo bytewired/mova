@@ -5,6 +5,8 @@ mod token_stream;
 use lexer::Lexer;
 use token_stream::TokenStream;
 
+use crate::utils::exit_with_err_msg;
+
 pub struct Compiler {
     file: String,
     phase: Phase,
@@ -22,10 +24,16 @@ impl Compiler {
 
     pub fn compile(&self) {
         let tokens = Lexer::new(&self.file).tokenize();
-        let _stream = TokenStream::new(tokens);
+
+        let stream = if self.phase == Phase::Parser {
+            TokenStream::new(tokens)
+        } else {
+            exit_with_err_msg("")
+        };
     }
 }
 
+#[derive(PartialEq)]
 pub enum Phase {
     Lexer,
     Parser,

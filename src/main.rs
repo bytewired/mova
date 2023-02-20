@@ -20,7 +20,7 @@ fn main() {
 
     let phase = if let Some(phase) = args.get(2) {
         match phase.as_str() {
-            "lexer" => Phase::Lexer, // do only lexer
+            "lexer" => Phase::Lexer,
             "parser" => Phase::Parser,
             _ => Phase::All,
         }

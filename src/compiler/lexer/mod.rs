@@ -1,8 +1,9 @@
+mod chars_nav;
+
+use crate::compiler::lexer::chars_nav::CharsNavigator;
 use crate::compiler::token::{Token, TokenKind, Value};
 use crate::utils::{exit_with_err_msg, print_debug};
 use std::collections::HashMap;
-use std::iter::Peekable;
-use std::str::Chars;
 
 pub struct Lexer<'a> {
     nav: CharsNavigator<'a>,
@@ -80,153 +81,175 @@ impl<'a> Lexer<'a> {
             } else if let Some(identifier) = self.eat_identifier() {
                 return identifier;
             } else {
-                return match self.nav.current {
+                return match self.nav.current() {
                     Some(c) => {
                         let token = match c {
                             '(' => {
-                                Token::new(TokenKind::LeftParen, self.nav.line, Value::from("("))
+                                Token::new(TokenKind::LeftParen, self.nav.line(), Value::from("("))
                             }
                             ')' => {
-                                Token::new(TokenKind::RightParen, self.nav.line, Value::from(")"))
+                                Token::new(TokenKind::RightParen, self.nav.line(), Value::from(")"))
                             }
-                            '[' => {
-                                Token::new(TokenKind::LeftBracket, self.nav.line, Value::from("["))
-                            }
-                            ']' => {
-                                Token::new(TokenKind::RightBracket, self.nav.line, Value::from("]"))
-                            }
+                            '[' => Token::new(
+                                TokenKind::LeftBracket,
+                                self.nav.line(),
+                                Value::from("["),
+                            ),
+                            ']' => Token::new(
+                                TokenKind::RightBracket,
+                                self.nav.line(),
+                                Value::from("]"),
+                            ),
                             '{' => {
-                                Token::new(TokenKind::LeftBrace, self.nav.line, Value::from("{"))
+                                Token::new(TokenKind::LeftBrace, self.nav.line(), Value::from("{"))
                             }
                             '}' => {
-                                Token::new(TokenKind::RightBrace, self.nav.line, Value::from("}"))
+                                Token::new(TokenKind::RightBrace, self.nav.line(), Value::from("}"))
                             }
                             ';' => {
-                                Token::new(TokenKind::Semicolon, self.nav.line, Value::from(":"))
+                                Token::new(TokenKind::Semicolon, self.nav.line(), Value::from(":"))
                             }
                             ':' => {
-                                if self.nav.match_next(c) {
+                                if self.nav.next_if_match(c) {
                                     Token::new(
                                         TokenKind::ColonColon,
-                                        self.nav.line,
+                                        self.nav.line(),
                                         Value::from("::"),
                                     )
                                 } else {
-                                    Token::new(TokenKind::Colon, self.nav.line, Value::from(":"))
+                                    Token::new(TokenKind::Colon, self.nav.line(), Value::from(":"))
                                 }
                             }
                             '.' => {
-                                if self.nav.match_next(c) {
-                                    Token::new(TokenKind::DotDot, self.nav.line, Value::from(".."))
+                                if self.nav.next_if_match(c) {
+                                    Token::new(
+                                        TokenKind::DotDot,
+                                        self.nav.line(),
+                                        Value::from(".."),
+                                    )
                                 } else {
-                                    Token::new(TokenKind::Dot, self.nav.line, Value::from("."))
+                                    Token::new(TokenKind::Dot, self.nav.line(), Value::from("."))
                                 }
                             }
                             '-' => {
-                                if self.nav.match_next(c) {
-                                    Token::new(TokenKind::Dec, self.nav.line, Value::from("--"))
-                                } else if self.nav.match_next('=') {
+                                if self.nav.next_if_match(c) {
+                                    Token::new(TokenKind::Dec, self.nav.line(), Value::from("--"))
+                                } else if self.nav.next_if_match('=') {
                                     Token::new(
                                         TokenKind::MinusEqual,
-                                        self.nav.line,
+                                        self.nav.line(),
                                         Value::from("-+"),
                                     )
-                                } else if self.nav.match_next('>') {
+                                } else if self.nav.next_if_match('>') {
                                     Token::new(
                                         TokenKind::MinusGreater,
-                                        self.nav.line,
+                                        self.nav.line(),
                                         Value::from("->"),
                                     )
                                 } else {
-                                    Token::new(TokenKind::Minus, self.nav.line, Value::from("-"))
+                                    Token::new(TokenKind::Minus, self.nav.line(), Value::from("-"))
                                 }
                             }
                             '+' => {
-                                if self.nav.match_next(c) {
-                                    Token::new(TokenKind::Inc, self.nav.line, Value::from("++"))
-                                } else if self.nav.match_next('=') {
+                                if self.nav.next_if_match(c) {
+                                    Token::new(TokenKind::Inc, self.nav.line(), Value::from("++"))
+                                } else if self.nav.next_if_match('=') {
                                     Token::new(
                                         TokenKind::PlusEqual,
-                                        self.nav.line,
+                                        self.nav.line(),
                                         Value::from("+="),
                                     )
                                 } else {
-                                    Token::new(TokenKind::Plus, self.nav.line, Value::from("+"))
+                                    Token::new(TokenKind::Plus, self.nav.line(), Value::from("+"))
                                 }
                             }
                             '/' => {
-                                // todo: add parsing comment
-                                if self.nav.match_next('=') {
+                                if self.nav.next_if_match('=') {
                                     Token::new(
                                         TokenKind::SlashEqual,
-                                        self.nav.line,
+                                        self.nav.line(),
                                         Value::from("/="),
                                     )
+                                } else if self.nav.next_if_match(c) {
+                                    while let Some(c) = self.nav.next() {
+                                        if c == '\n' {
+                                            break;
+                                        }
+                                    }
+
+                                    self.nav.next();
+                                    continue;
                                 } else {
-                                    Token::new(TokenKind::Slash, self.nav.line, Value::from("/"))
+                                    Token::new(TokenKind::Slash, self.nav.line(), Value::from("/"))
                                 }
                             }
                             '*' => {
-                                if self.nav.match_next('=') {
+                                if self.nav.next_if_match('=') {
                                     Token::new(
                                         TokenKind::StarEqual,
-                                        self.nav.line,
+                                        self.nav.line(),
                                         Value::from("*="),
                                     )
                                 } else {
-                                    Token::new(TokenKind::Star, self.nav.line, Value::from("*"))
+                                    Token::new(TokenKind::Star, self.nav.line(), Value::from("*"))
                                 }
                             }
-                            ',' => Token::new(TokenKind::Comma, self.nav.line, Value::from(",")),
-                            '#' => Token::new(TokenKind::Sharp, self.nav.line, Value::from("#")),
-                            '|' => Token::new(TokenKind::Pipe, self.nav.line, Value::from("|")),
-                            '@' => Token::new(TokenKind::At, self.nav.line, Value::from("@")),
-                            '?' => Token::new(TokenKind::Question, self.nav.line, Value::from("?")),
+                            ',' => Token::new(TokenKind::Comma, self.nav.line(), Value::from(",")),
+                            '#' => Token::new(TokenKind::Sharp, self.nav.line(), Value::from("#")),
+                            '|' => Token::new(TokenKind::Pipe, self.nav.line(), Value::from("|")),
+                            '@' => Token::new(TokenKind::At, self.nav.line(), Value::from("@")),
+                            '?' => {
+                                Token::new(TokenKind::Question, self.nav.line(), Value::from("?"))
+                            }
                             '!' => {
-                                if self.nav.match_next('=') {
+                                if self.nav.next_if_match('=') {
                                     Token::new(
                                         TokenKind::BangEqual,
-                                        self.nav.line,
+                                        self.nav.line(),
                                         Value::from("!="),
                                     )
                                 } else {
-                                    Token::new(TokenKind::Bang, self.nav.line, Value::from("!"))
+                                    Token::new(TokenKind::Bang, self.nav.line(), Value::from("!"))
                                 }
                             }
                             '=' => {
-                                if self.nav.match_next('=') {
+                                if self.nav.next_if_match('=') {
                                     Token::new(
                                         TokenKind::EqualEqual,
-                                        self.nav.line,
+                                        self.nav.line(),
                                         Value::from("=="),
                                     )
                                 } else {
-                                    Token::new(TokenKind::Equal, self.nav.line, Value::from("="))
+                                    Token::new(TokenKind::Equal, self.nav.line(), Value::from("="))
                                 }
                             }
                             '<' => {
-                                if self.nav.match_next('=') {
+                                if self.nav.next_if_match('=') {
                                     Token::new(
                                         TokenKind::LessEqual,
-                                        self.nav.line,
+                                        self.nav.line(),
                                         Value::from("<="),
                                     )
                                 } else {
-                                    Token::new(TokenKind::Less, self.nav.line, Value::from("<"))
+                                    Token::new(TokenKind::Less, self.nav.line(), Value::from("<"))
                                 }
                             }
                             '>' => {
-                                if self.nav.match_next('=') {
+                                if self.nav.next_if_match('=') {
                                     Token::new(
                                         TokenKind::GreaterEqual,
-                                        self.nav.line,
+                                        self.nav.line(),
                                         Value::from(">="),
                                     )
                                 } else {
-                                    Token::new(TokenKind::Greater, self.nav.line, Value::from(">"))
+                                    Token::new(
+                                        TokenKind::Greater,
+                                        self.nav.line(),
+                                        Value::from(">"),
+                                    )
                                 }
                             }
-                            '^' => Token::new(TokenKind::Hat, self.nav.line, Value::from("^")),
+                            '^' => Token::new(TokenKind::Hat, self.nav.line(), Value::from("^")),
                             '\n' => {
                                 self.nav.next();
                                 continue;
@@ -239,7 +262,8 @@ impl<'a> Lexer<'a> {
                                 exit_with_err_msg(
                                     format!(
                                         "unknown token at {}:{}",
-                                        self.nav.line, self.nav.column
+                                        self.nav.line(),
+                                        self.nav.column()
                                     )
                                     .as_str(),
                                 );
@@ -263,22 +287,22 @@ impl<'a> Lexer<'a> {
         let mut exponent = String::new();
         let mut has_exponent = false;
 
-        if !is_digit(self.nav.current.unwrap()) {
+        if !self.nav.current().unwrap().is_digit(10) {
             return Option::None;
         }
 
         // parsing mantissa
         while !self.nav.is_at_end() {
-            let current = self.nav.current.unwrap();
+            let current = self.nav.current().unwrap();
 
-            if is_digit(current) {
+            if current.is_digit(10) {
                 mantissa.push(current)
             } else {
                 break;
             }
 
             let is_next_dot = matches!(self.nav.next(), Some(c) if c == '.');
-            let is_after_next_digit = matches!(self.nav.peek(), Some(c) if is_digit(*c));
+            let is_after_next_digit = matches!(self.nav.peek(), Some(c) if c.is_digit(10));
 
             if is_next_dot && is_after_next_digit {
                 has_exponent = true;
@@ -289,9 +313,9 @@ impl<'a> Lexer<'a> {
 
         if has_exponent {
             while !self.nav.is_at_end() {
-                let current = self.nav.current.unwrap();
+                let current = self.nav.current().unwrap();
 
-                if is_digit(current) {
+                if current.is_digit(10) {
                     exponent.push(current);
                     self.nav.next();
                 } else {
@@ -302,20 +326,20 @@ impl<'a> Lexer<'a> {
             let float = format!("{mantissa}.{exponent}").parse::<f32>().unwrap();
             return Option::Some(Token::new(
                 TokenKind::Float,
-                self.nav.line,
+                self.nav.line(),
                 Value::Float(float),
             ));
         }
 
         Option::Some(Token::new(
             TokenKind::Int,
-            self.nav.line,
+            self.nav.line(),
             Value::Int(mantissa.parse::<i32>().unwrap()),
         ))
     }
 
     fn eat_string(&mut self) -> Option<Token> {
-        if self.nav.current.unwrap() != '\"' {
+        if self.nav.current().unwrap() != '\"' {
             return Option::None;
         }
 
@@ -335,22 +359,22 @@ impl<'a> Lexer<'a> {
 
         Option::Some(Token::new(
             TokenKind::String,
-            self.nav.line,
+            self.nav.line(),
             Value::Str(string),
         ))
     }
 
     fn eat_identifier(&mut self) -> Option<Token> {
-        if matches!(self.nav.current, Some(c) if !c.is_alphabetic() && c != '_') {
+        if matches!(self.nav.current(), Some(c) if !c.is_alphabetic() && c != '_') {
             return None;
         }
 
-        let mut identifier = String::from(self.nav.current.unwrap());
+        let mut identifier = String::from(self.nav.current().unwrap());
 
         loop {
             match self.nav.peek() {
                 Some(c) => {
-                    if c.is_alphabetic() || *c == '_' || is_digit(*c) {
+                    if c.is_alphabetic() || *c == '_' || c.is_digit(10) {
                         identifier.push(self.nav.next().unwrap());
                     } else {
                         break;
@@ -363,82 +387,18 @@ impl<'a> Lexer<'a> {
         self.nav.next();
 
         match self.keywords.get_key_value(identifier.as_str()) {
-            Some(token) => {
-                Option::Some(Token::new(*token.1, self.nav.line, Value::Str(identifier)))
-            }
+            Some(token) => Option::Some(Token::new(
+                *token.1,
+                self.nav.line(),
+                Value::Str(identifier),
+            )),
             None => Option::Some(Token::new(
                 TokenKind::Identifier,
-                self.nav.line,
+                self.nav.line(),
                 Value::Str(identifier),
             )),
         }
     }
-}
-
-struct CharsNavigator<'a> {
-    chars: Peekable<Chars<'a>>,
-    current: Option<char>,
-    line: u32,
-    column: u32,
-}
-
-impl<'a> CharsNavigator<'a> {
-    fn new(mut chars: Chars<'a>) -> Self {
-        let current_char = chars.next();
-
-        CharsNavigator {
-            chars: chars.peekable(),
-            current: current_char,
-            line: 1,
-            column: 1,
-        }
-    }
-
-    fn next(&mut self) -> Option<char> {
-        self.current = self.chars.next();
-
-        if let Some(c) = self.current {
-            if c == '\n' {
-                self.line += 1;
-                self.column = 0;
-            } else {
-                self.column += 1;
-            }
-        }
-        self.current
-    }
-
-    fn peek(&mut self) -> Option<&char> {
-        self.chars.peek()
-    }
-
-    fn match_next(&mut self, c: char) -> bool {
-        let next = self.chars.next_if(|next| *next == c);
-
-        if next.is_some() {
-            self.current = next;
-        };
-
-        if let Some(c) = self.current {
-            if c == '\n' {
-                self.line += 1;
-                self.column = 0;
-            } else {
-                self.column += 1;
-            }
-        };
-
-        next.is_some()
-    }
-
-    const fn is_at_end(&self) -> bool {
-        self.current.is_none()
-    }
-}
-
-// utils
-fn is_digit(c: char) -> bool {
-    c.is_digit(10)
 }
 
 #[cfg(test)]
@@ -534,5 +494,15 @@ mod tests {
         assert_eq!(tokens[3].kind, TokenKind::RightParen);
         assert_eq!(tokens[4].kind, TokenKind::LeftBrace);
         assert_eq!(tokens[5].kind, TokenKind::RightBrace);
+    }
+
+    #[test]
+    fn parse_comment() {
+        let source = "// comment";
+        let mut lexer = Lexer::new(source);
+
+        let tokens = lexer.tokenize();
+
+        assert_eq!(tokens.len(), 0)
     }
 }
