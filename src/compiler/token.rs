@@ -69,7 +69,7 @@ pub enum TokenKind {
     Eof,
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub enum TokenSuffix {
     None,
     D,
@@ -78,6 +78,20 @@ pub enum TokenSuffix {
     U,
     UL,
     ULL,
+}
+
+impl TokenSuffix {
+    pub fn from(str: &String) -> Option<TokenSuffix> {
+        match str.as_str() {
+            "D" => Some(TokenSuffix::D),
+            "L" => Some(TokenSuffix::L),
+            "LL" => Some(TokenSuffix::LL),
+            "U" => Some(TokenSuffix::U),
+            "UL" => Some(TokenSuffix::UL),
+            "ULL" => Some(TokenSuffix::ULL),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -125,6 +139,16 @@ impl Token {
             kind: kind,
             modd: TokenMod::None,
             suffix: TokenSuffix::None,
+            value: value,
+            line: line,
+        }
+    }
+
+    pub fn new_number(kind: TokenKind, line: u32, value: Value, suffix: TokenSuffix) -> Self {
+        Token {
+            kind: kind,
+            modd: TokenMod::None,
+            suffix: suffix,
             value: value,
             line: line,
         }

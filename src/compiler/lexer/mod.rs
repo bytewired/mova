@@ -1,22 +1,24 @@
 mod chars_nav;
 
-use crate::compiler::lexer::chars_nav::CharsNavigator;
-use crate::compiler::token::{Token, TokenKind, Value};
-use crate::utils::{exit_with_err_msg, print_debug};
+use super::lexer::chars_nav::CharsNavigator;
+use super::token::{Token, TokenKind, TokenSuffix, Value};
+use crate::utils::{exit_with_err_msg, print_debug, syntax_error};
 use std::collections::HashMap;
 
 pub struct Lexer<'a> {
+    file_path: &'a str,
     nav: CharsNavigator<'a>,
     keywords: HashMap<&'static str, TokenKind>,
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(source: &'a str) -> Self {
+    pub fn new(file_path: &'a str, source: &'a str) -> Self {
         if source.is_empty() {
             panic!("File is empty")
         }
 
         Lexer {
+            file_path: file_path,
             nav: CharsNavigator::new(source.chars()),
             keywords: Self::init_keywords(),
         }
@@ -259,15 +261,12 @@ impl<'a> Lexer<'a> {
                                 continue;
                             }
                             _ => {
-                                exit_with_err_msg(
-                                    format!(
-                                        "unknown token at {}:{}",
-                                        self.nav.line(),
-                                        self.nav.column()
-                                    )
-                                    .as_str(),
+                                syntax_error(
+                                    "unknown token",
+                                    self.file_path,
+                                    self.nav.line(),
+                                    self.nav.column(),
                                 );
-                                continue;
                             }
                         };
 
@@ -296,19 +295,28 @@ impl<'a> Lexer<'a> {
             let current = self.nav.current().unwrap();
 
             if current.is_digit(10) {
-                mantissa.push(current)
+                mantissa.push(current);
+                self.nav.next();
             } else {
                 break;
             }
+        }
 
-            let is_next_dot = matches!(self.nav.next(), Some(c) if c == '.');
-            let is_after_next_digit = matches!(self.nav.peek(), Some(c) if c.is_digit(10));
+        if let Some(suffix) = self.eat_int_suffix() {
+            return Option::Some(Token::new_number(
+                TokenKind::Int,
+                self.nav.line(),
+                Value::Int(mantissa.parse::<i32>().unwrap()),
+                suffix,
+            ));
+        }
 
-            if is_next_dot && is_after_next_digit {
-                has_exponent = true;
-                self.nav.next();
-                break;
-            }
+        let is_next_dot = matches!(self.nav.current(), Some(c) if c == '.');
+        let is_after_next_digit = matches!(self.nav.peek(), Some(c) if c.is_digit(10));
+
+        if is_next_dot && is_after_next_digit {
+            has_exponent = true;
+            self.nav.next();
         }
 
         if has_exponent {
@@ -324,10 +332,12 @@ impl<'a> Lexer<'a> {
             }
 
             let float = format!("{mantissa}.{exponent}").parse::<f32>().unwrap();
-            return Option::Some(Token::new(
+
+            return Option::Some(Token::new_number(
                 TokenKind::Float,
                 self.nav.line(),
                 Value::Float(float),
+                self.eat_float_suffix(),
             ));
         }
 
@@ -336,6 +346,63 @@ impl<'a> Lexer<'a> {
             self.nav.line(),
             Value::Int(mantissa.parse::<i32>().unwrap()),
         ))
+    }
+
+    fn eat_int_suffix(&mut self) -> Option<TokenSuffix> {
+        let is_next_suffix = matches!(self.nav.current(), Some(c) if c == 'U' || c == 'L');
+
+        if !is_next_suffix {
+            return None;
+        }
+
+        let mut suffix = String::new();
+
+        loop {
+            match self.nav.current() {
+                Some(c) => match c {
+                    'U' => suffix.push(c),
+                    'L' => suffix.push(c),
+                    'D' => syntax_error(
+                        "invalid suffix for integer type",
+                        self.file_path,
+                        self.nav.line(),
+                        self.nav.column(),
+                    ),
+                    _ => {
+                        if let Some(token_suffix) = TokenSuffix::from(&suffix) {
+                            return Some(token_suffix);
+                        } else {
+                            syntax_error(
+                                format!("unknown suffix {suffix}").as_str(),
+                                self.file_path,
+                                self.nav.line(),
+                                self.nav.column(),
+                            );
+                        }
+                    }
+                },
+                None => {
+                    if let Some(token_suffix) = TokenSuffix::from(&suffix) {
+                        return Some(token_suffix);
+                    } else {
+                        return None;
+                    }
+                }
+            }
+
+            self.nav.next();
+        }
+    }
+
+    fn eat_float_suffix(&mut self) -> TokenSuffix {
+        let is_next_suffix = matches!(self.nav.current(), Some(c) if c == 'D');
+
+        if !is_next_suffix {
+            return TokenSuffix::None;
+        }
+
+        self.nav.next();
+        TokenSuffix::D
     }
 
     fn eat_string(&mut self) -> Option<Token> {
@@ -403,12 +470,14 @@ impl<'a> Lexer<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::compiler::token::TokenSuffix;
+
     use super::*;
 
     #[test]
     fn eat_number_int() {
         let source = "123456";
-        let mut lexer = Lexer::new(source);
+        let mut lexer = Lexer::new("/test.mv", source);
 
         let token = lexer.eat_number().unwrap();
 
@@ -417,9 +486,51 @@ mod tests {
     }
 
     #[test]
+    fn parse_all_ints_suffixes() {
+        let source = "10 11U 12L 13UL 14LL 15ULL";
+        let mut lexer = Lexer::new("/test.mv", source);
+
+        let tokens = lexer.tokenize();
+
+        assert_eq!(tokens.len(), 6);
+        assert_eq!(tokens[0].value, Value::Int(10));
+        assert_eq!(tokens[0].suffix, TokenSuffix::None);
+
+        assert_eq!(tokens[1].value, Value::Int(11));
+        assert_eq!(tokens[1].suffix, TokenSuffix::U);
+
+        assert_eq!(tokens[2].value, Value::Int(12));
+        assert_eq!(tokens[2].suffix, TokenSuffix::L);
+
+        assert_eq!(tokens[3].value, Value::Int(13));
+        assert_eq!(tokens[3].suffix, TokenSuffix::UL);
+
+        assert_eq!(tokens[4].value, Value::Int(14));
+        assert_eq!(tokens[4].suffix, TokenSuffix::LL);
+
+        assert_eq!(tokens[5].value, Value::Int(15));
+        assert_eq!(tokens[5].suffix, TokenSuffix::ULL);
+    }
+
+    #[test]
+    fn parse_float_suffix() {
+        let source = "10.0 11.0D";
+        let mut lexer = Lexer::new("/test.mv", source);
+
+        let tokens = lexer.tokenize();
+
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0].value, Value::Float(10.0));
+        assert_eq!(tokens[0].suffix, TokenSuffix::None);
+
+        assert_eq!(tokens[1].value, Value::Float(11.0));
+        assert_eq!(tokens[1].suffix, TokenSuffix::D);
+    }
+
+    #[test]
     fn eat_number_float() {
         let source = "3.14";
-        let mut lexer = Lexer::new(source);
+        let mut lexer = Lexer::new("/test.mv", source);
 
         let token = lexer.eat_number().unwrap();
 
@@ -430,7 +541,7 @@ mod tests {
     #[test]
     fn eat_string_is_valid_string() {
         let source = "\"abcdef\"";
-        let mut lexer = Lexer::new(source);
+        let mut lexer = Lexer::new("/test.mv", source);
 
         let token = lexer.eat_string().unwrap();
 
@@ -442,7 +553,7 @@ mod tests {
     #[ignore = "need to handle process::exit()"]
     fn eat_string_is_unterminated_string() {
         let source = "\"abcdef";
-        let mut lexer = Lexer::new(source);
+        let mut lexer = Lexer::new("/test.mv", source);
 
         lexer.eat_string();
     }
@@ -450,7 +561,7 @@ mod tests {
     #[test]
     fn eat_identifier_starts_with_undescore() {
         let source = "_asd";
-        let mut lexer = Lexer::new(source);
+        let mut lexer = Lexer::new("/test.mv", source);
 
         let token = lexer.eat_identifier().unwrap();
 
@@ -461,7 +572,7 @@ mod tests {
     #[test]
     fn eat_identifier_starts_with_number() {
         let source = "10_asd";
-        let mut lexer = Lexer::new(source);
+        let mut lexer = Lexer::new("/test.mv", source);
 
         let token = lexer.eat_identifier();
 
@@ -471,7 +582,7 @@ mod tests {
     #[test]
     fn eat_identifier_import() {
         let source = "import";
-        let mut lexer = Lexer::new(source);
+        let mut lexer = Lexer::new("/test.mv", source);
 
         let token = lexer.eat_identifier().unwrap();
 
@@ -482,7 +593,7 @@ mod tests {
     #[test]
     fn parse_empty_fn_without_parameters() {
         let source = "fn foo() { }";
-        let mut lexer = Lexer::new(source);
+        let mut lexer = Lexer::new("/test.mv", source);
 
         let tokens = lexer.tokenize();
 
@@ -499,7 +610,7 @@ mod tests {
     #[test]
     fn parse_comment() {
         let source = "// comment";
-        let mut lexer = Lexer::new(source);
+        let mut lexer = Lexer::new("/test.mv", source);
 
         let tokens = lexer.tokenize();
 

@@ -30,7 +30,7 @@ fn main() {
 
     match fs::read_to_string(path) {
         Ok(file) => {
-            Compiler::new(file, phase).compile();
+            Compiler::new(path.to_string(), file, phase).compile();
         }
         Err(e) => {
             match e.kind() {
