@@ -1,10 +1,11 @@
 mod lexer;
-mod token;
-mod token_stream;
+pub mod token;
+pub mod token_stream;
 
 use lexer::Lexer;
 use token_stream::TokenStream;
 
+use crate::parser::decl_parser::DeclParser;
 use crate::utils::exit_with_err_msg;
 
 pub struct Compiler {
@@ -27,11 +28,13 @@ impl Compiler {
     pub fn compile(&self) {
         let tokens = Lexer::new(&self.file_path, &self.file_source).tokenize();
 
-        let stream = if self.phase == Phase::Parser {
+        let mut stream = if self.phase == Phase::Parser {
             TokenStream::new(tokens)
         } else {
             exit_with_err_msg("")
         };
+
+        let decls = DeclParser::new(&mut stream).parse();
     }
 }
 

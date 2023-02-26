@@ -1,3 +1,7 @@
+mod compiler;
+mod utils;
+mod parser;
+
 use std::env;
 use std::fs;
 use std::io::ErrorKind;
@@ -5,8 +9,6 @@ use std::io::ErrorKind;
 use crate::compiler::Compiler;
 use crate::compiler::Phase;
 use crate::utils::exit_with_err_msg;
-mod compiler;
-mod utils;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

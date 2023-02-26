@@ -69,7 +69,7 @@ pub enum TokenKind {
     Eof,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum TokenSuffix {
     None,
     D,
@@ -94,7 +94,7 @@ impl TokenSuffix {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum TokenMod {
     None,
     Hex,
@@ -110,7 +110,7 @@ pub enum TypeKind {
     Array,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Value {
     None,
     Int(i32),
@@ -124,7 +124,7 @@ impl Value {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Token {
     pub kind: TokenKind,
     pub modd: TokenMod,
