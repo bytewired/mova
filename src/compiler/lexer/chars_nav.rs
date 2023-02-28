@@ -54,7 +54,7 @@ impl<'a> CharsNavigator<'a> {
     pub const fn line(&self) -> u32 {
         self.line
     }
-    
+
     pub const fn column(&self) -> u32 {
         self.column
     }

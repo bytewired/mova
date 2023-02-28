@@ -1,6 +1,7 @@
 mod lexer;
 pub mod token;
 pub mod token_stream;
+pub mod utils;
 
 use lexer::Lexer;
 use token_stream::TokenStream;
@@ -28,7 +29,7 @@ impl Compiler {
     pub fn compile(&self) {
         let tokens = Lexer::new(&self.file_path, &self.file_source).tokenize();
 
-        let mut stream = if self.phase == Phase::Parser {
+        let mut stream = if self.phase == Phase::Parser || self.phase == Phase::All {
             TokenStream::new(tokens)
         } else {
             exit_with_err_msg("")

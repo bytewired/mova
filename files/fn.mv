@@ -1,2 +1,2 @@
-fn foo() {  } 
-fn bar(var d, let x) {  }
+fn foo(){} 
+fn bar(var d, let x){}

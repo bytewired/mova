@@ -1,6 +1,6 @@
 mod compiler;
-mod utils;
 mod parser;
+mod utils;
 
 use std::env;
 use std::fs;

@@ -1,3 +1,5 @@
+use crate::utils::exit_with_err_msg;
+
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum TokenKind {
     LeftParen,
@@ -121,6 +123,13 @@ pub enum Value {
 impl Value {
     pub fn from(slice: &'static str) -> Value {
         Value::Str(slice.to_string())
+    }
+
+    pub fn get_str(&self) -> String {
+        match self {
+            Self::Str(s) => s.clone(),
+            _ => exit_with_err_msg("expected Value::Str"),
+        }
     }
 }
 
