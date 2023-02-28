@@ -1,5 +1,4 @@
 mod compiler;
-mod parser;
 mod utils;
 
 use std::env;

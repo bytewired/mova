@@ -1,4 +1,5 @@
 mod lexer;
+mod parser;
 pub mod token;
 pub mod token_stream;
 pub mod utils;
@@ -6,7 +7,7 @@ pub mod utils;
 use lexer::Lexer;
 use token_stream::TokenStream;
 
-use crate::parser::decl_parser::DeclParser;
+use parser::decl_parser::DeclParser;
 use crate::utils::exit_with_err_msg;
 
 pub struct Compiler {
