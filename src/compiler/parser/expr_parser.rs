@@ -1,6 +1,5 @@
+use crate::compiler::ast::expr::Expr;
 use crate::compiler::token_stream::TokenStream;
-
-pub struct Expr {}
 
 pub struct ExprParser<'a> {
     stream: &'a mut TokenStream,

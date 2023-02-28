@@ -1,8 +1,7 @@
+use crate::compiler::ast::stmt::Stmt;
 use crate::compiler::token::{TokenKind, Value};
 use crate::compiler::token_stream::TokenStream;
 use std::vec;
-
-pub struct Stmt {}
 
 pub struct StmtParser<'a> {
     stream: &'a mut TokenStream,

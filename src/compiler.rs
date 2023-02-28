@@ -1,5 +1,6 @@
 mod lexer;
 mod parser;
+mod ast;
 pub mod token;
 pub mod token_stream;
 pub mod utils;

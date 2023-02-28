@@ -1,39 +1,11 @@
+use crate::compiler::ast::decl::{Decl, FnDecl, FnParam, LetDecl, VarDecl};
+use crate::compiler::ast::expr::Expr;
 use crate::compiler::token::{TokenKind, Value};
 use crate::compiler::token_stream::TokenStream;
 use crate::compiler::utils::compare_token_kind;
-use crate::utils::exit_with_err_msg;
 
-use super::expr_parser::{Expr, ExprParser};
-use super::stmt_parser::{Stmt, StmtParser};
-
-pub struct VarDecl {
-    name: String,
-    expr: Expr,
-}
-
-pub struct LetDecl {
-    name: String,
-    expr: Expr,
-}
-
-pub struct FnDecl {
-    name: String,
-    params: Vec<FnParam>,
-    stmts: Vec<Stmt>,
-}
-
-pub struct FnParam {
-    // TODO add type, currently by default it's int
-    // type_info: TypeInfo
-    name: String,
-    is_mutable: bool,
-}
-
-pub enum Decl {
-    Var(VarDecl),
-    Let(LetDecl),
-    Fn(FnDecl),
-}
+use super::expr_parser::ExprParser;
+use super::stmt_parser::StmtParser;
 
 pub struct DeclParser<'a> {
     stream: &'a mut TokenStream,
